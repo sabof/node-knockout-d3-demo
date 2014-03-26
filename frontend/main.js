@@ -81,10 +81,16 @@ var view = {
 
     this.lastAvailableDate = ko.observable();
     this.currentDate = ko.computed(function() {
+      var sliderValue = self.sliderValue();
+      var allowedDates = self.model.allowedDates();
+      if (! (sliderValue && allowedDates)) {
+        return;
+      }
+
       var newVal =  utils.getClosestMatch(
-        self.sliderValue(),
-        self.model.allowedDates()
+        sliderValue, allowedDates
       );
+
       self.model.fetchWeights(newVal);
       return newVal;
     });
@@ -115,7 +121,7 @@ var view = {
       if (! current) {
         return;
       }
-      return (new Date(current))
+      return (new Date(Number(current)))
         .toISOString()
         .match(/^[^T]+/)[0];
     });
@@ -128,7 +134,7 @@ var view = {
 
 // D3
 var d3View = {
-  init: function() {
+  initD3: function() {
     function position() {
       this.style("left", function(d) { return d.x + "px"; })
         .style("top", function(d) { return d.y + "px"; })
@@ -161,6 +167,9 @@ var d3View = {
           .text(function(d) { return d.children ? null : d.name; });
 
     });
+  },
+  init: function() {
+
   }
 };
 

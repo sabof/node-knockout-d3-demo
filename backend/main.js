@@ -22,7 +22,7 @@ var sources = {
 // Data processing
 
 sources.weights.forEach(function(it) {
-  it.Date = Date.parse(it);
+  it.Date = Date.parse(it.Date);
 });
 
 var weightDates = (function() {
@@ -32,7 +32,6 @@ var weightDates = (function() {
       dates[weight.Date] = true;
     }
   });
-
   return Object.keys(dates)
     .sort(function(a, b) {
       return a - b;
