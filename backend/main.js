@@ -42,20 +42,20 @@ function handleAPIRequest(req, res) {
   } else if (matches = req.url.match(/^\/api\/weights\/([^\/]+)/)) {
     // FIXME: pre-compute
     obj = sources.subsectorToSectorMap.filter(function(it) {
-        return it.Date === matches[1];
-      });
-      if (obj) {
-        serveJSON(res, obj);
-        return;
-      }
-    } else if (matches = req.url.match(/^\/api\/prices\/([^\/]+)/)) {
-      obj = sources.prices_for_subsectors[unescape(matches[1])];
-      if (obj) {
-        serveJSON(res, obj);
-        return;
-      }
+      return it.Date === matches[1];
+    });
+    if (obj) {
+      serveJSON(res, obj);
+      return;
     }
-    serve404(res);
+  } else if (matches = req.url.match(/^\/api\/prices\/([^\/]+)/)) {
+    obj = sources.prices_for_subsectors[unescape(matches[1])];
+    if (obj) {
+      serveJSON(res, obj);
+      return;
+    }
+  }
+  serve404(res);
 }
 
 function handleFileRequest(req, res) {
@@ -71,18 +71,18 @@ function handleFileRequest(req, res) {
     if (fs.statSync(filename).isDirectory()) filename += '/index.html';
 
     fs.readFile(filename, "binary", function(err, file) {
-        if(err) {
-          res.writeHead(500, {"Content-Type": "text/plain"});
-          res.write(err + "\n");
-          res.end();
-          return;
-        }
-
-        res.writeHead(200);
-        res.write(file, "binary");
+      if(err) {
+        res.writeHead(500, {"Content-Type": "text/plain"});
+        res.write(err + "\n");
         res.end();
-      });
+        return;
+      }
+
+      res.writeHead(200);
+      res.write(file, "binary");
+      res.end();
     });
+  });
 }
 
 var server = http.createServer(function(req, res) {
