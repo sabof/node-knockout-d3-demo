@@ -19,6 +19,12 @@ var sources = {
   prices_for_subsectors: require('./data/prices_for_subsectors.json')
 };
 
+// Data processing
+
+sources.weights.forEach(function(it) {
+  it.Date = Date.parse(it);
+});
+
 var weightDates = (function() {
   var dates = {};
   sources.weights.forEach(function(weight) {
@@ -26,9 +32,20 @@ var weightDates = (function() {
       dates[weight.Date] = true;
     }
   });
-  // FIXME: Sort me?
-  return Object.keys(dates);
+
+  return Object.keys(dates)
+    .sort(function(a, b) {
+      return a - b;
+    });
 }());
+
+function getDateWeights(date) {
+  return sources.weights.filter(function(it) {
+    return it.Date === date;
+  });
+}
+
+// Serving
 
 function serveJSON(res, object) {
   res.writeHead(200, {
@@ -44,23 +61,65 @@ function serve404(res) {
 	res.end("404 Not Found\n");
 }
 
+var sectorMap = (function() {
+  var map = {
+    name: 'root',
+    children: []
+  },
+      sectorMapRaw = sources.subsectorToSectorMap;
+
+  function getSectorCreate(sectorName) {
+    var object;
+
+    map.children.some(function(it) {
+      if (it.name === sectorName) {
+        object = it;
+        return true;
+      }
+    });
+
+    if (! object) {
+      object = {
+        name: sectorName,
+        children: []
+      };
+      map.children.push(object);
+    }
+
+    return object;
+  }
+
+  for (var subsectorName in sectorMapRaw) {
+    if (sectorMapRaw.hasOwnProperty(subsectorName)) {
+      var sectorName = sectorMapRaw[subsectorName];
+      var sector = getSectorCreate(sectorName);
+
+      sector.children.push({
+        name: subsectorName
+      });
+    }
+  }
+
+  return map;
+}());
+
+// Request handling
+
 function handleAPIRequest(req, res) {
   /*jshint boss:true */
   var matches, obj;
 
-  if (/^\/api\/sectors\/?/.test(req.url)) {
-    serveJSON(res, sources.subsectorToSectorMap);
+  if (/^\/api\/initialPayload\/?/.test(req.url)) {
+    serveJSON(res, {
+      sectors: sources.subsectorToSectorMap,
+      dates: weightDates,
+      initialDate: weightDates[0],
+      initialData: getDateWeights(weightDates[0])
+    });
     return;
-
-  } else if (/^\/api\/weightDates\/?/.test(req.url)) {
-    serveJSON(res, weightDates);
-    return;
-
   } else if (matches = req.url.match(/^\/api\/weights\/([^\/]+)/)) {
     // FIXME: Cache?
-    obj = sources.subsectorToSectorMap.filter(function(it) {
-      return it.Date === matches[1];
-    });
+    obj = getDateWeights(matches[0]);
     if (obj) {
       serveJSON(res, obj);
       return;
@@ -82,7 +141,7 @@ function handleFileRequest(req, res) {
       filename = path.join(process.cwd(), 'frontend', uri);
 
   fs.exists(filename, function(exists) {
-    if(!exists) {
+    if (!exists) {
       serve404(res);
       return;
     }
@@ -90,7 +149,7 @@ function handleFileRequest(req, res) {
     if (fs.statSync(filename).isDirectory()) filename += '/index.html';
 
     fs.readFile(filename, "binary", function(err, file) {
-      if(err) {
+      if (err) {
         res.writeHead(500, {"Content-Type": "text/plain"});
         res.write(err + "\n");
         res.end();

@@ -1,169 +1,169 @@
-/*global Q, $, d3*/
+/*global ko, Q, $, d3*/
+
+var utils = {
+  getClosestMatch: function(value, candidates) {
+    var bestScore = Number.MAX_VALUE,
+        bestValue;
+
+    // FIXME: Can be optimized, so iteration stops when values start getting worse.
+    candidates.forEach(function(candidate) {
+      var currentScore = Math.abs(candidate - value);
+      if (currentScore < bestScore) {
+        bestScore = currentScore;
+        bestValue = candidate;
+      }
+    });
+    return bestValue;
+  }
+};
 
 var model = {
-  _sectorMap: {
-    name: 'root',
-    children: []
-  },
-
-  _getSectorCreate: function(sectorName) {
-    var object;
-
-    this._sectorMap.children.some(function(it) {
-      if (it.name === sectorName) {
-        object = it;
-        return true;
-      }
-    });
-
-    if (! object) {
-      object = {
-        name: sectorName,
-        children: []
-      };
-      this._sectorMap.children.push(object);
+  fetchWeights: function(date) {
+    // FIXME: Allows concurrent requests to the same resource?
+    var self = this;
+    if (this.weights()[date]) {
+      return;
     }
-
-    return object;
-  },
-
-  _populate: function(sectorMapRaw) {
-    for (var subsectorName in sectorMapRaw) {
-      if (sectorMapRaw.hasOwnProperty(subsectorName)) {
-        var sectorName = sectorMapRaw[subsectorName];
-        var sector = this._getSectorCreate(sectorName);
-
-        sector.children.push({
-          name: subsectorName
-        });
-      }
-    }
-  },
-
-  // _currentDateWeightRequest: null,
-
-  getDateWeights: function(date) {
-    /*jshint newcap: false */
-
-    // Cancel/return current request
-
-    var existing = this._weightCache[date];
-    if (existing) {
-      return Q(existing);
-    }
-    var def = Q.defer();
     $.get(
-      'api/something',
+      'api/weights/' + date,
       function(data) {
-        this._weightCache[date] = 'something';
-
+        self.weights()[date] = data;
       });
   },
-  _getAllowedDates: null,
-  getAllowedDates: function() {
 
+  _initBindings: function() {
+    this.allowedDates = ko.observable([]);
+    this.weights = ko.observable({});
+    this.initialDate = ko.observable();
+    this.sectorMap = ko.observable();
   },
 
-  // FIXME: auto-init?
-  init: function() {
+  _fetchInitialPayload: function() {
     var self = this;
-    var def = $.Deferred();
+    $.get(
+      'api/initialPayload/',
+      function(data) {
+        self.allowedDates(data.dates);
 
-    // var allowedDates;
-    $.ajax({
-      url: 'api/weightDates',
-      async: false,
-      success: function(result) {
-        self._allowedDates = result;
-      }
-    });
+        var weights = self.weights();
+        weights[data.initialDate] = data.initialData;
+        self.weights.valueHasMutated();
 
-    $.ajax({
-      url: 'api/sectors',
-      success: function(result) {
-        self._populate(result);
-        def.resolve();
+        self.initialDate(data.initialDate);
+        self.sectorMap(data.sectors);
       }
-    });
-    return def.promise();
+    );
+  },
+
+  init: function() {
+    this._initBindings();
+    this._fetchInitialPayload();
   }
 
 };
 
-// D3
-function position() {
-  this.style("left", function(d) { return d.x + "px"; })
-    .style("top", function(d) { return d.y + "px"; })
-    .style("width", function(d) { return Math.max(0, d.dx - 1) + "px"; })
-    .style("height", function(d) { return Math.max(0, d.dy - 1) + "px"; });
-}
+var view = {
+  model: model,
 
-// var margin = {top: 40, right: 10, bottom: 10, left: 10},
-//     width = 960 - margin.left - margin.right,
-//     height = 500 - margin.top - margin.bottom;
+  _initBindings: function() {
+    var self = this;
 
-var color = d3.scale.category20c();
+    this.sliderValue = ko.observable();
+    this.sliderMin = ko.computed(function() {
+      var dates = self.model.allowedDates();
+      return dates ? dates[0] : null;
+    });
 
-function valueFunc(d) {
-  return Math.random();
-  // return model._weightCache(d.name) || Math.random();
-}
+    this.sliderMax = ko.computed(function() {
+      var dates = self.model.allowedDates();
+      return dates ? dates[dates.length - 1] : null;
+    });
 
-var treemap = d3.layout.treemap()
-      .size([600, 600])
-      .sticky(true) // ?
-      .value(valueFunc);
+    this.lastAvailableDate = ko.observable();
+    this.currentDate = ko.computed(function() {
+      var newVal =  utils.getClosestMatch(
+        self.sliderValue(),
+        self.model.allowedDates()
+      );
+      self.model.fetchWeights(newVal);
+      return newVal;
+    });
 
-var div = d3.select("#d3-box");
-      // .style("position", "relative")
-      // .style("width", (width + margin.left + margin.right) + "px")
-      // .style("height", (height + margin.top + margin.bottom) + "px")
-      // .style("left", margin.left + "px")
-      // .style("top", margin.top + "px");
+    this.currentDate.subscribe(function(oldValue) {
+      if (self.model.weights()[oldValue]) {
+        self.lastAvailableDate(oldValue);
+      }
+    }, null, 'beforeChange');
 
-// FIXME: Refactor to data-specific defferreds?
-$.when( model.init() ).then(function() {
-  var node = div.datum(model._sectorMap).selectAll(".node")
-        .data(treemap.nodes)
-        .enter().append("div")
-        .attr("class", "node")
-        .call(position)
-    .style("background", function(d) { return d.children ? color(d.name) : null; })
-    .text(function(d) { return d.children ? null : d.name; });
+    // FIXME: Hacky?
+    this.model.initialDate.subscribe(function(newValue) {
+      self.sliderValue(newValue);
+    });
 
-});
+    this.displayedWeightData = ko.computed(function() {
+      var current = self.currentDate();
+      var previous = self.lastAvailableDate();
+      var weights = self.model.weights();
 
-function getClosestDate() {
+      return weights[current] ||
+        weights[previous] ||
+        false;
+    });
 
-}
-
-function getClosestMatch(value, candidates) {
-
-  var bestScore = Number.MAX_VALUE,
-      bestValue;
-  candidates.forEach(function(candidate) {
-    var currentScore = Math.abs(candidate - value);
-    if (currentScore < bestScore) {
-      bestScore = currentScore;
-      bestValue = candidate;
-    }
-    return candidate;
-  });
-}
-
-function setDate(date) {
-  console.log(date);
-}
-
-var rangeInput = document.getElementById('date-range');
-rangeInput.min = rangeInput.value = Date.parse(allowedDates[0]);
-rangeInput.max = Date.parse(allowedDates[allowedDates.length -1]);
-
-rangeInput.addEventListener('change', function() {
-  /*jshint nonew:false */
-  var dateString = (new Date(Number(rangeInput.value)))
+    this.dateLabel = ko.computed(function() {
+      var current = self.currentDate();
+      if (! current) {
+        return;
+      }
+      return (new Date(current))
         .toISOString()
         .match(/^[^T]+/)[0];
+    });
+  },
 
-  setDate(dateString);
-});
+  init: function() {
+    this._initBindings();
+  }
+};
+
+// D3
+var d3View = {
+  init: function() {
+    function position() {
+      this.style("left", function(d) { return d.x + "px"; })
+        .style("top", function(d) { return d.y + "px"; })
+        .style("width", function(d) { return Math.max(0, d.dx - 1) + "px"; })
+        .style("height", function(d) { return Math.max(0, d.dy - 1) + "px"; });
+    }
+
+    var color = d3.scale.category20c();
+
+    function valueFunc(d) {
+      return Math.random();
+      // return model._weightCache(d.name) || Math.random();
+    }
+
+    var treemap = d3.layout.treemap()
+          .size([600, 600])
+          .sticky(true) // ?
+          .value(valueFunc);
+
+    var div = d3.select("#d3-box");
+
+    // FIXME: Refactor to data-specific defferreds?
+    $.when( model.init() ).then(function() {
+      var node = div.datum(model._sectorMap).selectAll(".node")
+            .data(treemap.nodes)
+            .enter().append("div")
+            .attr("class", "node")
+            .call(position)
+            .style("background", function(d) { return d.children ? color(d.name) : null; })
+          .text(function(d) { return d.children ? null : d.name; });
+
+    });
+  }
+};
+
+model.init();
+view.init();
+ko.applyBindings(view);
