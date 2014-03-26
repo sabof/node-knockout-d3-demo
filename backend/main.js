@@ -13,9 +13,9 @@ var fs = require('fs'),
     sys = require('sys');
 
 var sources = {
-  weights: require('../data-sources/weights.json'),
-  subsectorToSectorMap: require('../data-sources/SubsectorToSectorMap.json'),
-  prices_for_subsectors: require('../data-sources/prices_for_subsectors.json')
+  weights: require('./data/weights.json'),
+  subsectorToSectorMap: require('./data/SubsectorToSectorMap.json'),
+  prices_for_subsectors: require('./data/prices_for_subsectors.json')
 };
 
 function serveJSON(res, object) {
