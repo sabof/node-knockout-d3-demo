@@ -1,5 +1,8 @@
 #d3-box {
-	/* margin: 100px auto 0; */
+	margin: 20px auto 0;
+	position: relative;
+	width: 600px;
+	height: 600px;
 }
 
 #d3-box .node {
@@ -9,4 +12,10 @@
   overflow: hidden;
   position: absolute;
   text-indent: 2px;
+}
+
+#date-range {
+	margin: 20px auto 0;
+	display: block;
+	width: 560px;
 }

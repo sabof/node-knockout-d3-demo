@@ -10,13 +10,25 @@ var fs = require('fs'),
     http = require('http'),
     path = require("path"),
     url = require("url"),
-    sys = require('sys');
+    sys = require('sys'),
+    repl = require("repl");
 
 var sources = {
   weights: require('./data/weights.json'),
   subsectorToSectorMap: require('./data/SubsectorToSectorMap.json'),
   prices_for_subsectors: require('./data/prices_for_subsectors.json')
 };
+
+var weightDates = (function() {
+  var dates = {};
+  sources.weights.forEach(function(weight) {
+    if (weight.Date) {
+      dates[weight.Date] = true;
+    }
+  });
+  // FIXME: Sort me?
+  return Object.keys(dates);
+}());
 
 function serveJSON(res, object) {
   res.writeHead(200, {
@@ -39,8 +51,13 @@ function handleAPIRequest(req, res) {
   if (/^\/api\/sectors\/?/.test(req.url)) {
     serveJSON(res, sources.subsectorToSectorMap);
     return;
+
+  } else if (/^\/api\/weightDates\/?/.test(req.url)) {
+    serveJSON(res, weightDates);
+    return;
+
   } else if (matches = req.url.match(/^\/api\/weights\/([^\/]+)/)) {
-    // FIXME: pre-compute
+    // FIXME: Cache?
     obj = sources.subsectorToSectorMap.filter(function(it) {
       return it.Date === matches[1];
     });
@@ -48,6 +65,7 @@ function handleAPIRequest(req, res) {
       serveJSON(res, obj);
       return;
     }
+
   } else if (matches = req.url.match(/^\/api\/prices\/([^\/]+)/)) {
     obj = sources.prices_for_subsectors[unescape(matches[1])];
     if (obj) {
@@ -55,6 +73,7 @@ function handleAPIRequest(req, res) {
       return;
     }
   }
+
   serve404(res);
 }
 
