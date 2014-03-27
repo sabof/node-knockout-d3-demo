@@ -225,16 +225,16 @@
 
     update: function() {
       var transition;
+
+      this.node.data(this.treemap.nodes);
       if (! this.animationInProgress()) {
         transition = this.node
-          .data(this.treemap.value(this._valueFunc).nodes)
           .transition()
           .duration(1000)
           .call(this._position);
 
       } else {
         transition = this.node
-          .data(this.treemap.value(this._valueFunc).nodes)
           .transition()
           .duration(0)
           .delay(10)
