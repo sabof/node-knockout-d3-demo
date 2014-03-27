@@ -28,6 +28,7 @@ var model = {
       'api/weights/' + date,
       function(data) {
         self.weights()[date] = data;
+        self.weights.valueHasMutated();
       });
   },
 
@@ -35,7 +36,8 @@ var model = {
     this.allowedDates = ko.observable([]);
     this.weights = ko.observable({});
     this.initialDate = ko.observable();
-    this.sectorMap = ko.observable();
+    this.sectorMap = ko.observable({});
+    this.dataInitialized = ko.observable();
   },
 
   _fetchInitialPayload: function() {
@@ -51,6 +53,7 @@ var model = {
 
         self.initialDate(data.initialDate);
         self.sectorMap(data.sectors);
+        self.dataInitialized(true);
       }
     );
   },
@@ -134,45 +137,77 @@ var view = {
 
 // D3
 var d3View = {
-  initD3: function() {
-    function position() {
-      this.style("left", function(d) { return d.x + "px"; })
-        .style("top", function(d) { return d.y + "px"; })
-        .style("width", function(d) { return Math.max(0, d.dx - 1) + "px"; })
-        .style("height", function(d) { return Math.max(0, d.dy - 1) + "px"; });
-    }
+  view: view,
 
-    var color = d3.scale.category20c();
-
-    function valueFunc(d) {
-      return Math.random();
-      // return model._weightCache(d.name) || Math.random();
-    }
-
-    var treemap = d3.layout.treemap()
-          .size([600, 600])
-          .sticky(true) // ?
-          .value(valueFunc);
-
-    var div = d3.select("#d3-box");
-
-    // FIXME: Refactor to data-specific defferreds?
-    $.when( model.init() ).then(function() {
-      var node = div.datum(model._sectorMap).selectAll(".node")
-            .data(treemap.nodes)
-            .enter().append("div")
-            .attr("class", "node")
-            .call(position)
-            .style("background", function(d) { return d.children ? color(d.name) : null; })
-          .text(function(d) { return d.children ? null : d.name; });
-
-    });
+  update: function() {
+    this.node
+      .data(this.treemap.value(this._valueFunc).nodes)
+      .transition()
+      .duration(1500)
+      .call(this._position);
   },
-  init: function() {
 
+  _position: function() {
+    this.style("left", function(d) { return d.x + "px"; })
+      .style("top", function(d) { return d.y + "px"; })
+      .style("width", function(d) { return d.dx + "px"; })
+      .style("height", function(d) { return d.dy + "px"; })
+      .style('display', function(d) {
+        return (d.dx && d.dy) ? 'block' : 'none';
+      });
+  },
+
+  initD3: function() {
+    var self = this;
+    this._valueFunc = function(d) {
+      var fromData = self.view.displayedWeightData()[d.name];
+      return fromData ? fromData.Weight : 0;
+    };
+
+    function text(d) {
+      return d.children ? null : d.name;
+    }
+
+    this.root = d3.select("#d3-box");
+
+    var color = d3.scale.category20b();
+
+    this.treemap = d3.layout.treemap()
+      .size([600, 600])
+      .sticky(true) // ?
+      .value(this._valueFunc);
+
+    this.node = self.root
+      .datum(this.view.model.sectorMap())
+      .selectAll(".node")
+      .data(this.treemap.nodes)
+      .enter()
+      .append("div")
+      .attr("class", "node")
+      .call(this._position)
+      .style("background", function(d) {
+        return d.children ? color(d.name) : null;
+      })
+      .attr('title', text)
+      .text(text);
+  },
+
+  initBindings: function() {
+    this.view.displayedWeightData.subscribe(
+      this.update.bind(this)
+    );
+  },
+
+  init: function() {
+    this.initD3();
+    this.initBindings();
   }
 };
 
 model.init();
 view.init();
+model.dataInitialized.subscribe(function(val) {
+  if (val) { d3View.init(); }
+});
+
 ko.applyBindings(view);

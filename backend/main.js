@@ -39,9 +39,14 @@ var weightDates = (function() {
 }());
 
 function getDateWeights(date) {
-  return sources.weights.filter(function(it) {
-    return it.Date === date;
+  var clean = sources.weights.filter(function(it) {
+    return it.Date == date;
   });
+  var result = {};
+  clean.forEach(function(it) {
+    result[it.SubSector] = it;
+  });
+  return result;
 }
 
 // Serving
@@ -110,7 +115,7 @@ function handleAPIRequest(req, res) {
 
   if (/^\/api\/initialPayload\/?/.test(req.url)) {
     serveJSON(res, {
-      sectors: sources.subsectorToSectorMap,
+      sectors: sectorMap,
       dates: weightDates,
       initialDate: weightDates[0],
       initialData: getDateWeights(weightDates[0])
@@ -118,7 +123,7 @@ function handleAPIRequest(req, res) {
     return;
   } else if (matches = req.url.match(/^\/api\/weights\/([^\/]+)/)) {
     // FIXME: Cache?
-    obj = getDateWeights(matches[0]);
+    obj = getDateWeights(matches[1]);
     if (obj) {
       serveJSON(res, obj);
       return;
