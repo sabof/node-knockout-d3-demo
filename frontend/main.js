@@ -154,12 +154,6 @@
         );
       };
 
-      this.animationToggleImage = ko.computed(function() {
-        return self.animationInProgress() ?
-          'images/Pause.png' :
-          'images/Play.png';
-      });
-
       this.sliderValue = ko.observable();
 
       this.sliderMin = this.model.minDate;

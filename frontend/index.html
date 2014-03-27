@@ -10,10 +10,10 @@
   <body>
     <div id="d3-box"></div>
     <div id="controls">
-      <img src=""
-           id="animation-toggle"
-           data-bind="click: animationToggleOnClick,
-                      attr: {src: animationToggleImage}" />
+      <span id="animation-toggle"
+            data-bind="click: animationToggleOnClick,
+                       css: {isPause: animationInProgress}">
+      </span>
       <input type="range" id="date-range" name="date-range" value=""
              data-bind="value: sliderValue,
                         attr: {min: sliderMin, max: sliderMax},
