@@ -1,4 +1,4 @@
-/*global ko, Q, $, d3*/
+/*global ko, d3*/
 
 var utils = {
   getClosestMatch: function(value, candidates) {
@@ -40,9 +40,9 @@ var model = {
     if (this.weights()[date]) {
       return;
     }
-    $.get(
+    d3.json(
       'api/weights/' + date,
-      function(data) {
+      function(error, data) {
         self.weights()[date] = data;
         self.weights.valueHasMutated();
       });
@@ -54,9 +54,9 @@ var model = {
     }
 
     var self = this;
-    $.get(
+    d3.json(
       'api/allWeights/',
-      function(data) {
+      function(error, data) {
         self.weights(data);
       });
 
@@ -93,9 +93,9 @@ var model = {
 
   _fetchInitialPayload: function() {
     var self = this;
-    $.get(
+    d3.json(
       'api/initialPayload/',
-      function(data) {
+      function(error, data) {
         self.allowedDates(data.dates);
 
         var weights = self.weights();

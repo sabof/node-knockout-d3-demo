@@ -124,7 +124,6 @@ function handleAPIRequest(req, res) {
     });
     return;
   } else if (matches = req.url.match(/^\/api\/weights\/([^\/]+)/)) {
-    // FIXME: Cache?
     obj = getDateWeights(matches[1]);
     if (obj) {
       serveJSON(res, obj);
