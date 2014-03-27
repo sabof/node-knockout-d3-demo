@@ -22,12 +22,13 @@ html {
   line-height: 12px;
   overflow: hidden;
   position: absolute;
-  text-indent: 2px;
+  /* text-indent: 2px; */
 	color: white;
 	padding: 3px;
 	box-sizing: border-box;
 	text-overflow: ellipsis;
 	font-weight: bold;
+	cursor: default;
 }
 
 #d3-box .node:hover {
@@ -35,10 +36,18 @@ html {
 	color: black;
 }
 
-#date-range {
-	margin: 20px auto 10px;
+#controls {
+	margin: 20px 0 10px;
 	display: block;
-	width: 560px;
+	text-align: center;
+}
+
+#controls * {
+	vertical-align: middle;
+}
+
+#date-range {
+	width: 540px;
 }
 
 h3 {

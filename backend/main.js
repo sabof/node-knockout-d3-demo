@@ -38,15 +38,17 @@ var weightDates = (function() {
     });
 }());
 
+var dateWeigts = (function() {
+  var map = {};
+  sources.weights.forEach(function(it) {
+    var obj = map[it.Date] || (map[it.Date] = {});
+    obj[it.SubSector] = it;
+  });
+  return map;
+}());
+
 function getDateWeights(date) {
-  var clean = sources.weights.filter(function(it) {
-    return it.Date == date;
-  });
-  var result = {};
-  clean.forEach(function(it) {
-    result[it.SubSector] = it;
-  });
-  return result;
+  return dateWeigts[date];
 }
 
 // Serving
@@ -128,7 +130,9 @@ function handleAPIRequest(req, res) {
       serveJSON(res, obj);
       return;
     }
-
+  } else if (/^\/api\/allWeights\/?/.test(req.url)) {
+    serveJSON(res, dateWeigts);
+    return;
   } else if (matches = req.url.match(/^\/api\/prices\/([^\/]+)/)) {
     obj = sources.prices_for_subsectors[unescape(matches[1])];
     if (obj) {

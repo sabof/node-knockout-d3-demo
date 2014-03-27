@@ -14,6 +14,22 @@ var utils = {
       }
     });
     return bestValue;
+  },
+
+  getNext: function(current, values) {
+    var index = values.indexOf(current);
+    if (index === -1) {
+      return;
+    }
+    return values[index + 1];
+  },
+
+  makeCounterFunc: function(times, endFunc) {
+    return function() {
+      if (--times === 0) {
+        return endFunc();
+      }
+    };
   }
 };
 
@@ -32,12 +48,37 @@ var model = {
       });
   },
 
+  fetchAllWeights: function() {
+    if (this.allWeightsFetched()) {
+      return;
+    }
+
+    var self = this;
+    $.get(
+      'api/allWeights/',
+      function(data) {
+        self.weights(data);
+      });
+
+  },
+
   _initBindings: function() {
+    var self = this;
+
     this.allowedDates = ko.observable([]);
     this.weights = ko.observable({});
     this.initialDate = ko.observable();
     this.sectorMap = ko.observable({});
     this.dataInitialized = ko.observable();
+
+    this.allWeightsFetched = ko.computed(function() {
+      var allowedDates = self.allowedDates().length;
+      var weights = Object.keys(self.weights()).length;
+
+      return allowedDates &&
+        weights &&
+        allowedDates === weights;
+    });
   },
 
   _fetchInitialPayload: function() {
@@ -68,10 +109,45 @@ var model = {
 var view = {
   model: model,
 
+  animationNext: function() {
+    if (! this.animationInProgress()) {
+      return;
+    }
+    var nextDate = utils.getNext(
+      this.currentDate(), model.allowedDates()
+    );
+    if (nextDate) {
+      this.currentDate(nextDate);
+    } else {
+      this.animationInProgress(false);
+    }
+  },
+
   _initBindings: function() {
     var self = this;
 
+    this.animationInProgress = ko.observable();
+
+    this.animationInProgress.subscribe(function(val) {
+      if (val) {
+        self.model.fetchAllWeights();
+      }
+    });
+
+    this.animationToggleOnClick = function() {
+      self.animationInProgress(
+        ! self.animationInProgress()
+      );
+    };
+
+    this.animationToggleImage = ko.computed(function() {
+      return self.animationInProgress() ?
+        'images/Pause.png' :
+        'images/Play.png';
+    });
+
     this.sliderValue = ko.observable();
+
     this.sliderMin = ko.computed(function() {
       var dates = self.model.allowedDates();
       return dates ? dates[0] : null;
@@ -80,6 +156,10 @@ var view = {
     this.sliderMax = ko.computed(function() {
       var dates = self.model.allowedDates();
       return dates ? dates[dates.length - 1] : null;
+    });
+
+    this.sliderDisabled = ko.computed(function() {
+      return self.animationInProgress() || ! self.model.dataInitialized();
     });
 
     this.lastAvailableDate = ko.observable();
@@ -143,11 +223,29 @@ var d3View = {
   view: view,
 
   update: function() {
-    this.node
-      .data(this.treemap.value(this._valueFunc).nodes)
-      .transition()
-      .duration(1500)
-      .call(this._position);
+    var transition;
+    if (! this.animationInProgress()) {
+      transition = this.node
+        .data(this.treemap.value(this._valueFunc).nodes)
+        .transition()
+        .duration(1000)
+        .call(this._position);
+
+    } else {
+      transition = this.node
+        .data(this.treemap.value(this._valueFunc).nodes)
+        .transition()
+        .duration(0)
+        .delay(10)
+        .call(this._position);
+
+      transition.each(
+        'end',
+        utils.makeCounterFunc(
+          transition.size(),
+          this.view.animationNext.bind(this.view)
+        ));
+    }
   },
 
   _position: function() {
@@ -160,8 +258,9 @@ var d3View = {
       });
   },
 
-  initD3: function() {
+  _initD3: function() {
     var self = this;
+
     this._valueFunc = function(d) {
       var fromData = self.view.displayedWeightData()[d.name];
       return fromData ? fromData.Weight : 0;
@@ -199,15 +298,25 @@ var d3View = {
       .text(text);
   },
 
-  initBindings: function() {
+  _initBindings: function() {
+    var self = this;
+
     this.view.displayedWeightData.subscribe(
+      this.update.bind(this)
+    );
+
+    this.animationInProgress = ko.computed(function() {
+      return self.view.model.allWeightsFetched() &&
+        self.view.animationInProgress();
+    });
+    this.animationInProgress.subscribe(
       this.update.bind(this)
     );
   },
 
   init: function() {
-    this.initD3();
-    this.initBindings();
+    this._initD3();
+    this._initBindings();
   }
 };
 
