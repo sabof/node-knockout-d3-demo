@@ -7,8 +7,6 @@ html {
 #d3-box {
 	margin: 20px auto 0;
 	position: relative;
-	width: 600px;
-	height: 600px;
 	border-color: white;
 	border-style: solid;
 	border-width: 2px 2px 1px 1px;
@@ -33,8 +31,8 @@ html {
 }
 
 #d3-box .node:hover {
-	background: white;
-	color: black;
+	background: white !important;
+	color: black !important;
 }
 
 #controls {
@@ -48,7 +46,8 @@ html {
 }
 
 #date-range {
-	width: 540px;
+	width: 720px;
+	margin-right: 15px;
 }
 
 #animation-toggle {

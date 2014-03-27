@@ -266,6 +266,8 @@ var d3View = {
 
   _initD3: function() {
     var self = this;
+    var width = 900,
+        height = 600;
 
     this._valueFunc = function(d) {
       var fromData = self.view.displayedWeightData()[d.name];
@@ -280,13 +282,16 @@ var d3View = {
       }
     }
 
-    this.root = d3.select("#d3-box");
+    this.root = d3.select("#d3-box")
+      .style("width", width + "px")
+      .style("height", height + "px");
 
     var color = d3.scale.category20b();
 
     this.treemap = d3.layout.treemap()
-      .size([600, 600])
-      .sticky(true) // ?
+      .size([width, height])
+      .sticky(true)
+      .mode('slice-dice')
       .value(this._valueFunc);
 
     this.node = self.root

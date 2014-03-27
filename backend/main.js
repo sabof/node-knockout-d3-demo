@@ -1,17 +1,10 @@
 /*jshint node:true */
 /*global unescape */
 
-// API:
-// prices/SUBSECTOR
-// weights/DATE
-// sectors
-
 var fs = require('fs'),
     http = require('http'),
     path = require("path"),
-    url = require("url"),
-    sys = require('sys'),
-    repl = require("repl");
+    url = require("url");
 
 var sources = {
   weights: require('./data/weights.json'),
