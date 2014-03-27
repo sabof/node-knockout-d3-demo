@@ -1,8 +1,16 @@
+html {
+	font-family: arial, sans-serif;
+	background: #f8f8fb;
+}
+
 #d3-box {
 	margin: 20px auto 0;
 	position: relative;
 	width: 600px;
 	height: 600px;
+	border-color: white;
+	border-style: solid;
+	border-width: 2px 2px 1px 1px;
 }
 
 #d3-box .node {
@@ -22,8 +30,13 @@
 	font-weight: bold;
 }
 
+#d3-box .node:hover {
+	background: white;
+	color: black;
+}
+
 #date-range {
-	margin: 20px auto 0;
+	margin: 20px auto 10px;
 	display: block;
 	width: 560px;
 }

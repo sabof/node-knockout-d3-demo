@@ -83,19 +83,23 @@ var view = {
     });
 
     this.lastAvailableDate = ko.observable();
-    this.currentDate = ko.computed(function() {
-      var sliderValue = self.sliderValue();
-      var allowedDates = self.model.allowedDates();
-      if (! (sliderValue && allowedDates)) {
-        return;
-      }
 
-      var newVal =  utils.getClosestMatch(
-        sliderValue, allowedDates
-      );
+    this.currentDate = ko.computed({
+      read: function() {
+        var sliderValue = self.sliderValue();
+        var allowedDates = self.model.allowedDates();
+        if (! (sliderValue && allowedDates)) {
+          return;
+        }
 
-      self.model.fetchWeights(newVal);
-      return newVal;
+        var newVal =  utils.getClosestMatch(
+          sliderValue, allowedDates
+        );
+
+        self.model.fetchWeights(newVal);
+        return newVal;
+      },
+      write: self.sliderValue
     });
 
     this.currentDate.subscribe(function(oldValue) {
@@ -104,9 +108,8 @@ var view = {
       }
     }, null, 'beforeChange');
 
-    // FIXME: Hacky?
     this.model.initialDate.subscribe(function(newValue) {
-      self.sliderValue(newValue);
+      self.currentDate(newValue);
     });
 
     this.displayedWeightData = ko.computed(function() {
@@ -165,7 +168,11 @@ var d3View = {
     };
 
     function text(d) {
-      return d.children ? null : d.name;
+      if (d.children) {
+        return null;
+      } else {
+        return d.name.slice(0, 1) + d.name.slice(1).toLowerCase();
+      }
     }
 
     this.root = d3.select("#d3-box");
