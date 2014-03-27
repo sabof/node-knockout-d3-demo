@@ -1,6 +1,7 @@
 html {
 	font-family: arial, sans-serif;
 	background: #f8f8fb;
+	color: #888;
 }
 
 #d3-box {
@@ -37,7 +38,7 @@ html {
 }
 
 #controls {
-	margin: 20px 0 10px;
+	margin: 10px 0;
 	display: block;
 	text-align: center;
 }
@@ -48,6 +49,11 @@ html {
 
 #date-range {
 	width: 540px;
+}
+
+#animation-toggle {
+	cursor: pointer;
+	margin-left: -10px;
 }
 
 h3 {

@@ -79,6 +79,16 @@ var model = {
         weights &&
         allowedDates === weights;
     });
+
+    this.minDate = ko.computed(function() {
+      return self.allowedDates()[0] || null;
+    });
+
+    this.maxDate = ko.computed(function() {
+      var dates = self.allowedDates();
+      return dates[dates.length - 1] || null;
+    });
+
   },
 
   _fetchInitialPayload: function() {
@@ -131,6 +141,9 @@ var view = {
     this.animationInProgress.subscribe(function(val) {
       if (val) {
         self.model.fetchAllWeights();
+        if (self.currentDate() == self.model.maxDate()) {
+          self.currentDate(self.model.minDate());
+        }
       }
     });
 
@@ -148,15 +161,8 @@ var view = {
 
     this.sliderValue = ko.observable();
 
-    this.sliderMin = ko.computed(function() {
-      var dates = self.model.allowedDates();
-      return dates ? dates[0] : null;
-    });
-
-    this.sliderMax = ko.computed(function() {
-      var dates = self.model.allowedDates();
-      return dates ? dates[dates.length - 1] : null;
-    });
+    this.sliderMin = this.model.minDate;
+    this.sliderMax = this.model.maxDate;
 
     this.sliderDisabled = ko.computed(function() {
       return self.animationInProgress() || ! self.model.dataInitialized();
