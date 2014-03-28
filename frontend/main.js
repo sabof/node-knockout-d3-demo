@@ -49,8 +49,8 @@
         });
     },
 
-    fetchAllWeights: function() {
-      if (this.allWeightsFetched()) {
+    fetchAllDateWeights: function() {
+      if (this.allDateWeightsFetched()) {
         return;
       }
 
@@ -66,27 +66,27 @@
     _initBindings: function() {
       var self = this;
 
-      this.allowedDates = ko.observable([]);
+      this.availableDates = ko.observable([]);
       this.weights = ko.observable({});
       this.initialDate = ko.observable();
       this.sectorMap = ko.observable({});
       this.dataInitialized = ko.observable();
 
-      this.allWeightsFetched = ko.computed(function() {
-        var allowedDates = self.allowedDates().length;
+      this.allDateWeightsFetched = ko.computed(function() {
+        var availableDates = self.availableDates().length;
         var weights = Object.keys(self.weights()).length;
 
-        return allowedDates &&
+        return availableDates &&
           weights &&
-          allowedDates === weights;
+          availableDates === weights;
       });
 
       this.minDate = ko.computed(function() {
-        return self.allowedDates()[0] || null;
+        return self.availableDates()[0] || null;
       });
 
       this.maxDate = ko.computed(function() {
-        var dates = self.allowedDates();
+        var dates = self.availableDates();
         return dates[dates.length - 1] || null;
       });
 
@@ -97,7 +97,7 @@
       d3.json(
         'api/initialPayload/',
         function(error, data) {
-          self.allowedDates(data.dates);
+          self.availableDates(data.dates);
 
           var weights = self.weights();
           weights[data.initialDate] = data.initialData;
@@ -125,7 +125,7 @@
         return;
       }
       var nextDate = utils.getNext(
-        this.currentDate(), model.allowedDates()
+        this.currentDate(), model.availableDates()
       );
       if (nextDate) {
         this.currentDate(nextDate);
@@ -141,7 +141,7 @@
 
       this.animationInProgress.subscribe(function(val) {
         if (val) {
-          self.model.fetchAllWeights();
+          self.model.fetchAllDateWeights();
           if (self.currentDate() == self.model.maxDate()) {
             self.currentDate(self.model.minDate());
           }
@@ -168,13 +168,13 @@
       this.currentDate = ko.computed({
         read: function() {
           var sliderValue = self.sliderValue();
-          var allowedDates = self.model.allowedDates();
-          if (! (sliderValue && allowedDates)) {
+          var availableDates = self.model.availableDates();
+          if (! (sliderValue && availableDates)) {
             return;
           }
 
           var newVal =  utils.getClosestMatch(
-            sliderValue, allowedDates
+            sliderValue, availableDates
           );
 
           self.model.fetchWeights(newVal);
@@ -312,7 +312,7 @@
       );
 
       this.animationInProgress = ko.computed(function() {
-        return self.view.model.allWeightsFetched() &&
+        return self.view.model.allDateWeightsFetched() &&
           self.view.animationInProgress();
       });
       this.animationInProgress.subscribe(

@@ -6,43 +6,102 @@ var fs = require('fs'),
     path = require("path"),
     url = require("url");
 
+// Sources
+
 var sources = {
   weights: require('./data/weights.json'),
   subsectorToSectorMap: require('./data/SubsectorToSectorMap.json'),
   prices_for_subsectors: require('./data/prices_for_subsectors.json')
 };
 
-// Data processing
-
 sources.weights.forEach(function(it) {
   it.Date = Date.parse(it.Date);
 });
 
-var weightDates = (function() {
-  var dates = {};
-  sources.weights.forEach(function(weight) {
-    if (weight.Date) {
-      dates[weight.Date] = true;
-    }
-  });
-  return Object.keys(dates)
-    .sort(function(a, b) {
-      return a - b;
+// Data
+
+var data = {
+  availableDates: (function() {
+    var dates = {};
+    sources.weights.forEach(function(weight) {
+      if (weight.Date) {
+        dates[weight.Date] = true;
+      }
     });
-}());
+    return Object.keys(dates)
+      .sort(function(a, b) {
+        return a - b;
+      });
+  }()),
 
-var dateWeigts = (function() {
-  var map = {};
-  sources.weights.forEach(function(it) {
-    var obj = map[it.Date] || (map[it.Date] = {});
-    obj[it.SubSector] = it;
-  });
-  return map;
-}());
+  dateWeigts: (function() {
+    var map = {};
+    sources.weights.forEach(function(it) {
+      var obj = map[it.Date] || (map[it.Date] = {});
+      obj[it.SubSector] = it;
+    });
+    return map;
+  }()),
 
-function getDateWeights(date) {
-  return dateWeigts[date];
-}
+  sectorMap: (function() {
+    var map = {
+      name: 'root',
+      children: []
+    },
+        sectorMapRaw = sources.subsectorToSectorMap;
+
+    function getSectorCreate(sectorName) {
+      var object;
+
+      map.children.some(function(it) {
+        if (it.name === sectorName) {
+          object = it;
+          return true;
+        }
+      });
+
+      if (! object) {
+        object = {
+          name: sectorName,
+          children: []
+        };
+        map.children.push(object);
+      }
+
+      return object;
+    }
+
+    for (var subsectorName in sectorMapRaw) {
+      if (sectorMapRaw.hasOwnProperty(subsectorName)) {
+        var sectorName = sectorMapRaw[subsectorName];
+        var sector = getSectorCreate(sectorName);
+
+        sector.children.push({
+          name: subsectorName
+        });
+      }
+    }
+
+    return map;
+  }()),
+
+  getDateWeights: function(date) {
+    return this.dateWeigts[date];
+  },
+
+  getAllDateWeights: function() {
+    return this.dateWeigts;
+  },
+
+  getAvailableDates: function() {
+    return this.availableDates;
+  },
+
+  getFirstAvailableDate: function() {
+    return this.availableDates[0];
+  }
+
+ };
 
 // Serving
 
@@ -60,48 +119,6 @@ function serve404(res) {
 	res.end("404 Not Found\n");
 }
 
-var sectorMap = (function() {
-  var map = {
-    name: 'root',
-    children: []
-  },
-      sectorMapRaw = sources.subsectorToSectorMap;
-
-  function getSectorCreate(sectorName) {
-    var object;
-
-    map.children.some(function(it) {
-      if (it.name === sectorName) {
-        object = it;
-        return true;
-      }
-    });
-
-    if (! object) {
-      object = {
-        name: sectorName,
-        children: []
-      };
-      map.children.push(object);
-    }
-
-    return object;
-  }
-
-  for (var subsectorName in sectorMapRaw) {
-    if (sectorMapRaw.hasOwnProperty(subsectorName)) {
-      var sectorName = sectorMapRaw[subsectorName];
-      var sector = getSectorCreate(sectorName);
-
-      sector.children.push({
-        name: subsectorName
-      });
-    }
-  }
-
-  return map;
-}());
-
 // Request handling
 
 function handleAPIRequest(req, res) {
@@ -110,20 +127,22 @@ function handleAPIRequest(req, res) {
 
   if (/^\/api\/initialPayload\/?/.test(req.url)) {
     serveJSON(res, {
-      sectors: sectorMap,
-      dates: weightDates,
-      initialDate: weightDates[0],
-      initialData: getDateWeights(weightDates[0])
+      sectors: data.sectorMap,
+      dates: data.getAvailableDates(),
+      initialDate: data.getFirstAvailableDate(),
+      initialData: data.getDateWeights(
+        data.getFirstAvailableDate()
+      )
     });
     return;
   } else if (matches = req.url.match(/^\/api\/weights\/([^\/]+)/)) {
-    obj = getDateWeights(matches[1]);
+    obj = data.getDateWeights(matches[1]);
     if (obj) {
       serveJSON(res, obj);
       return;
     }
   } else if (/^\/api\/allWeights\/?/.test(req.url)) {
-    serveJSON(res, dateWeigts);
+    serveJSON(res, data.getAllDateWeights());
     return;
   } else if (matches = req.url.match(/^\/api\/prices\/([^\/]+)/)) {
     obj = sources.prices_for_subsectors[unescape(matches[1])];
