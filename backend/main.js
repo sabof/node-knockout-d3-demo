@@ -155,6 +155,15 @@ function handleAPIRequest(req, res) {
   serve404(res);
 }
 
+function fileNameToMimeType(filename) {
+  if (/\.js$/.test(filename)) {
+    return {"Content-Type": 'text/javascript'};
+  }
+  if (/\.css$/.test(filename)) {
+    return {"Content-Type": 'text/css'};
+  }
+}
+
 function handleFileRequest(req, res) {
   var uri = url.parse(req.url).pathname,
       filename = path.join(process.cwd(), 'frontend', uri);
@@ -175,7 +184,7 @@ function handleFileRequest(req, res) {
         return;
       }
 
-      res.writeHead(200);
+      res.writeHead(200, fileNameToMimeType(filename));
       res.write(file, "binary");
       res.end();
     });
