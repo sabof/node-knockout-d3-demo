@@ -300,6 +300,11 @@
         .style("background", function(d) {
           return d.children ? color(d.name) : null;
         })
+        .attr('title', text);
+
+      this.node
+        .append('div')
+        .attr('class', 'label')
         .attr('title', text)
         .text(text);
     },

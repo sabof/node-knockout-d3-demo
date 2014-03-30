@@ -23,12 +23,17 @@ html {
   position: absolute;
   /* text-indent: 2px; */
 	color: white;
-	padding: 3px;
-	-moz-box-sizing: border-box;
-	box-sizing: border-box;
-	text-overflow: ellipsis;
+	/* padding: 3px; */
+	/* -moz-box-sizing: border-box; */
+	/* box-sizing: border-box; */
 	font-weight: bold;
 	cursor: default;
+}
+
+#d3-box .node .label {
+  overflow: hidden;
+	text-overflow: ellipsis;
+	margin: 3px;
 }
 
 #d3-box .node:hover {
