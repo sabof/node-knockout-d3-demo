@@ -199,4 +199,5 @@ var server = http.createServer(function(req, res) {
   }
 });
 
-server.listen(8124, "127.0.0.1");
+var port = Number(process.env.PORT || 8124);
+server.listen(port);
